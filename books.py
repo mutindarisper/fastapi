@@ -62,4 +62,14 @@ def update_books(updated_book=Body()):
     for i in range(len(BOOKS)):
         if BOOKS[i]["title"].casefold() == updated_book["title"].casefold():
             BOOKS[i] = updated_book
+
+
+
     
+#delete method
+
+@app.delete("/books/delete_book/{book_title}")
+def delete_book(book_title: str):
+    for book in BOOKS:
+        if book["title"].casefold() == book_title.casefold():
+            BOOKS.remove(book)
