@@ -1,4 +1,5 @@
 from fastapi import Body, FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -73,3 +74,67 @@ def delete_book(book_title: str):
     for book in BOOKS:
         if book["title"].casefold() == book_title.casefold():
             BOOKS.remove(book)
+
+
+#assignment
+@app.get("/books/author/{book_author}")
+def read_author(book_author:str):
+    books_to_return = []
+    for book in BOOKS:
+        if book["author"].casefold() == book_author.casefold():
+            books_to_return.append(book)
+    return books_to_return
+
+
+# new HTTP method: QUERY
+
+BOOKS2 = [
+    {
+        "title": "Title One",
+        "author": "Author One",
+        "category": "science",
+        "year": 2021,
+        "publisher": "Pearson",
+        "language": "English",
+        "pages": 420,
+        "rating": 4.8,
+        "price": 2500,
+        "available": True,
+        "tags": ["physics", "space", "astronomy"]
+    },
+    {
+        "title": "Title Two",
+        "author": "Author Two",
+        "category": "math",
+        "year": 2019,
+        "publisher": "O'Reilly",
+        "language": "English",
+        "pages": 310,
+        "rating": 4.5,
+        "price": 1800,
+        "available": False,
+        "tags": ["algebra", "calculus"]
+    },
+    
+    
+]
+
+
+class BookSearchQuery(BaseModel):
+    author: str | None = None
+    category: str | None = None
+    year: int | None = None
+    publisher: str | None = None
+    tags: list[str] | None = None
+
+
+@app.api_route("/books/search", methods=["QUERY"])
+def search_books(query: BookSearchQuery = Body(...)):
+    books_to_return = []
+    for book in BOOKS2:
+        if (query.author is None or book["author"].casefold() == query.author.casefold()) and \
+           (query.category is None or book["category"].casefold() == query.category.casefold()) and \
+           (query.year is None or book["year"] == query.year) and \
+           (query.publisher is None or book["publisher"].casefold() == query.publisher.casefold()) :
+            books_to_return.append(book)
+    return books_to_return
