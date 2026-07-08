@@ -55,3 +55,11 @@ def create_book(new_book=Body()):
     BOOKS.append(new_book)
     return BOOKS
 
+#PUT method
+
+@app.put("/books/update_book")
+def update_books(updated_book=Body()):
+    for i in range(len(BOOKS)):
+        if BOOKS[i]["title"].casefold() == updated_book["title"].casefold():
+            BOOKS[i] = updated_book
+    
