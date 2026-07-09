@@ -3,7 +3,7 @@
 
 from typing import Optional
 
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Query
 from pydantic import BaseModel, Field #pydantics - library for data validation, data modelling, data parsing, error handling
 
 app = FastAPI()
@@ -93,7 +93,7 @@ def read_book_id(book_id: int = Path(gt=0)): #validating path parameters
 
 
 @app.get("/books/")
-def read_book_by_rating(rating:int):
+def read_book_by_rating(rating:int = Query(gt=0, lt=6)): #validating query parameters
     books_to_return = []
     for book in BOOKS:
         if book.rating == rating:
@@ -117,7 +117,7 @@ def delete_book(book_id:int = Path(gt=0)): #validating path parameters
 
 #assignment
 @app.get("/books/search/{published_date}")
-def read_book_by_publish_date(published_date: int):
+def read_book_by_publish_date(published_date: int =Path(gt=1997, lt=2027)): #validating path parameters
     books_to_return = []
     for book in BOOKS:
         if book.published_date == published_date:
