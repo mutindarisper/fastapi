@@ -27,11 +27,24 @@ class Book:
 
 
 class BookRequest(BaseModel):
-    id: Optional[int] = None
+    id: Optional[int] = Field(description="ID is not needed on create", default=None)
     title: str = Field(min_length=3) #extra field validation using pydantic's Field class
     author: str = Field(min_length=1 )
     description: str = Field(min_length=1, max_length=100)
-    rating: int = Field(gt=0, lt=5)
+    rating: int = Field(gt=0, lt=6)
+
+
+#pydantic configurations set the default values for the fields
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Journey to Senior Software Engineer",
+                "author": "Risper",
+                "description": "A book about advancing in software engineering",
+                "rating": 5 
+            }
+        }
+    }
 
 
 BOOKS = [
