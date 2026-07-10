@@ -3,7 +3,7 @@
 
 from typing import Optional
 
-from fastapi import FastAPI, Path, Query
+from fastapi import FastAPI, Path, Query, HTTPException
 from pydantic import BaseModel, Field #pydantics - library for data validation, data modelling, data parsing, error handling
 
 app = FastAPI()
@@ -90,6 +90,7 @@ def read_book_id(book_id: int = Path(gt=0)): #validating path parameters
     for book in BOOKS:
         if book.id == book_id:
             return book
+    raise HTTPException(status_code=404, detail="Item not found") #raising an exception if the book is not found
 
 
 @app.get("/books/")
@@ -103,17 +104,26 @@ def read_book_by_rating(rating:int = Query(gt=0, lt=6)): #validating query param
 
 @app.put("/books/update_book")
 def update_book(book_request: BookRequest):
+    book_changed = False
     for i in range(len(BOOKS)):
         if BOOKS[i].id == book_request.id:
             BOOKS[i] = book_request
+            book_changed = True
             return BOOKS[i]
+    if not book_changed:
+        raise HTTPException(status_code=404, detail="Item not found") #raising an exception if the book is not found
+        
    
 @app.delete("/books/delete_book/{book_id}")
 def delete_book(book_id:int = Path(gt=0)): #validating path parameters
+    book_changed = False
     for i in range(len(BOOKS)):
         if BOOKS[i].id == book_id:
             BOOKS.pop(i)
+            book_changed = True
             break
+    if not book_changed:
+        raise HTTPException(status_code=404, detail="Item not found") #raising an exception if the book is not found
 
 #assignment
 @app.get("/books/search/{published_date}")
