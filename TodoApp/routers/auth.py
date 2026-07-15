@@ -1,20 +1,24 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from models import Users
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordRequestForm
-from jose import jwt
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 
 
-router = APIRouter() #use router instead of app so that we can use it as a route in the main app
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+) #use router instead of app so that we can use it as a route in the main app
 SECRET_KEY = 'dbb5d50dbe5725aa3ec80bee2f428074a1462a18754285d5c4998cae63a25e7c'
 ALGORITHM = 'HS256'
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto') #hashing the password using bcrypt
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token') #create a token for the user to use to access the api
 
 
 class CreateUserRequest(BaseModel):
@@ -58,10 +62,21 @@ async def create_access_token(username: str, user_id: int, expires_delta: timede
 
 
 
+async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        user_id: int = payload.get("id")
+
+        if username is None or user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+        return {"username": username, "id": user_id}
+
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
 
 
-
-@router.post("/auth", status_code=status.HTTP_201_CREATED) #create a new user
+@router.post("/", status_code=status.HTTP_201_CREATED) #create a new user
 async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
 
     create_user_request_model = Users(
@@ -83,6 +98,6 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
 async def login_for_access_token(form_data:Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        return "Failed Authentication"
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
     token = await create_access_token(user.username, user.id, timedelta(minutes=20)) #create a token for the user with a 20 minute expiration 
     return {"access_token": token, "token_type": "bearer"}
