@@ -34,6 +34,8 @@ class TodoRequest(BaseModel):
 @router.get("/", status_code=status.HTTP_200_OK)
 async def read_all(user: user_dependency, db: db_dependency): #dependency injection - this depends on the get_db function to get the db session
     #return db.query(Todos).all() #query the db of all the Todos
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
 
     #get todos by a user
     return db.query(Todos).filter(Todos.owner_id == user.get("id")).all() #get all the todos that belong to the user
@@ -44,8 +46,10 @@ async def read_all(user: user_dependency, db: db_dependency): #dependency inject
 
 
 @router.get("/todo/{todo_id}", status_code=status.HTTP_200_OK) #get a specific todo by id
-async def read_todo(db: db_dependency, todo_id: int = Path(gt=0)):
-    todo_model = db.query(Todos).filter(Todos.id == todo_id).first() #for performance, we use first() instead of all() to get the first result that matches the filter
+async def read_todo(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+    todo_model = db.query(Todos).filter(Todos.owner_id == user.get("id")).filter(Todos.id == todo_id).first() #for performance, we use first() instead of all() to get the first result that matches the filter
     if todo_model is not None:
         return todo_model
     raise HTTPException(status_code=404, detail="Todo not found") #if the todo is not found, return a 404 error
