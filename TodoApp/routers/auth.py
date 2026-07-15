@@ -1,5 +1,5 @@
 from typing import Annotated
-
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -8,9 +8,12 @@ from database import SessionLocal
 from models import Users
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import jwt
 
 
 router = APIRouter() #use router instead of app so that we can use it as a route in the main app
+SECRET_KEY = 'dbb5d50dbe5725aa3ec80bee2f428074a1462a18754285d5c4998cae63a25e7c'
+ALGORITHM = 'HS256'
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto') #hashing the password using bcrypt
 
 
@@ -21,6 +24,12 @@ class CreateUserRequest(BaseModel):
     last_name: str = Field(min_length=3)
     password: str = Field(min_length=3)
     role: str = Field(min_length=3)
+
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str 
 
 
 def get_db():
@@ -38,9 +47,19 @@ def authenticate_user(db: Session, username: str, password: str):
         return False
     if not bcrypt_context.verify(password, user.hashed_password):
         return False
-    return True
+    return user
     
-   
+
+async def create_access_token(username: str, user_id: int, expires_delta: timedelta):
+    encode = {"sub": username, "id": user_id}
+    expires = datetime.now(timezone.utc) + expires_delta
+    encode.update({"exp": expires})
+    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+
+
+
 
 @router.post("/auth", status_code=status.HTTP_201_CREATED) #create a new user
 async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
@@ -60,9 +79,10 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
     db.commit() #commit the changes to the db
     #return create_user_request_model
 
-@router.post("/token")
+@router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK) #create a new token for the user
 async def login_for_access_token(form_data:Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         return "Failed Authentication"
-    return 'Succesful Authentication'
+    token = await create_access_token(user.username, user.id, timedelta(minutes=20)) #create a token for the user with a 20 minute expiration 
+    return {"access_token": token, "token_type": "bearer"}
