@@ -32,8 +32,15 @@ class TodoRequest(BaseModel):
     complete: bool
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def read_all(db: db_dependency): #dependency injection - this depends on the get_db function to get the db session
-    return db.query(Todos).all() #query the db of all the Todos
+async def read_all(user: user_dependency, db: db_dependency): #dependency injection - this depends on the get_db function to get the db session
+    #return db.query(Todos).all() #query the db of all the Todos
+
+    #get todos by a user
+    return db.query(Todos).filter(Todos.owner_id == user.get("id")).all() #get all the todos that belong to the user
+
+
+
+
 
 
 @router.get("/todo/{todo_id}", status_code=status.HTTP_200_OK) #get a specific todo by id
