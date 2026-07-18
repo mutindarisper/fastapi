@@ -32,6 +32,10 @@ class UserVerificationRequest(BaseModel):
     password: str 
     new_password: str = Field(min_length=6)
 
+class UserPhoneNumberRequest(BaseModel):
+    id: int
+    phone_number: str = Field(min_length=10, max_length=15)
+
 
 @router.get("/", status_code=status.HTTP_200_OK)
 def get_users(db: db_dependency, user: user_dependency):
@@ -56,4 +60,12 @@ def update_user_password(user:user_dependency,  db: db_dependency, user_verifica
     db.add(user_model)
     db.commit()
     
-
+#assignment: add a new route to update the phone number of a user
+@router.put("/phone_number", status_code=status.HTTP_204_NO_CONTENT)
+def update_user_phone_number(user:user_dependency, db: db_dependency, user_phone_number_request: UserPhoneNumberRequest):
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+    user_model = db.query(Users).filter(Users.id == user.get("id")).first()
+    user_model.phone_number = user_phone_number_request.phone_number
+    db.add(user_model)
+    db.commit()
